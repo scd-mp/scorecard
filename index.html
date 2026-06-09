@@ -389,6 +389,25 @@ button,label{font-family:var(--font-b);letter-spacing:.1px}
   color:#cbd5e1;font-size:10.5px;line-height:1.7;
   white-space:pre-line;
 }
+
+/* ── Tour overlay ── */
+#tour-overlay{position:fixed;inset:0;z-index:99998;pointer-events:none;}
+#tour-overlay.active{pointer-events:all;}
+.tour-backdrop{position:fixed;inset:0;background:rgba(0,0,0,0.55);z-index:99998;}
+.tour-spotlight{position:fixed;z-index:99999;border-radius:10px;box-shadow:0 0 0 9999px rgba(0,0,0,0.55);pointer-events:none;transition:all 0.4s cubic-bezier(.4,0,.2,1);}
+.tour-card{position:fixed;z-index:100000;background:#fff;border-radius:14px;padding:22px 24px 18px;width:320px;box-shadow:0 8px 40px rgba(0,0,0,0.22);transition:all 0.4s cubic-bezier(.4,0,.2,1);}
+.tour-card .tour-step-badge{display:inline-block;background:#1a6faf;color:#fff;font-size:10px;font-weight:700;padding:2px 9px;border-radius:20px;margin-bottom:10px;letter-spacing:.5px;}
+.tour-card h3{margin:0 0 8px;font-size:15px;font-weight:700;color:#1e293b;}
+.tour-card p{margin:0 0 16px;font-size:13px;color:#475569;line-height:1.6;}
+.tour-card .tour-nav{display:flex;justify-content:space-between;align-items:center;gap:10px;}
+.tour-card .tour-nav button{padding:8px 18px;border-radius:8px;border:none;cursor:pointer;font-size:13px;font-weight:600;transition:background .2s;}
+.tour-btn-skip{background:#f1f5f9;color:#64748b;}
+.tour-btn-skip:hover{background:#e2e8f0;}
+.tour-btn-next{background:#1a6faf;color:#fff;}
+.tour-btn-next:hover{background:#155d94;}
+.tour-dots{display:flex;gap:6px;align-items:center;}
+.tour-dot{width:7px;height:7px;border-radius:50%;background:#cbd5e1;transition:background .2s;}
+.tour-dot.active{background:#1a6faf;}
 </style>
 </head>
 <body>
@@ -578,12 +597,12 @@ button,label{font-family:var(--font-b);letter-spacing:.1px}
   </div>
   <div id="trend-charts-area">
     <div class="t-card">
-      <div class="t-card-title">Monthly Screening Count by District</div>
+      <div class="t-card-title">Monthly Screening</div>
       <div class="t-card-sub">Count of Test Result · Trend_data sheet</div>
       <div class="t-canvas-wrap"><canvas id="chart-screening"></canvas></div>
     </div>
     <div class="t-card">
-      <div class="t-card-title">Monthly Disease Positive Count by District</div>
+      <div class="t-card-title">Monthly Diseased</div>
       <div class="t-card-sub">SCD (HbSS) Disease Count · Trend_data sheet</div>
       <div class="t-canvas-wrap"><canvas id="chart-disease"></canvas></div>
     </div>
@@ -938,9 +957,11 @@ function buildTrendDD(){
     const isMP=dist==='MADHYA PRADESH';
     const col=isMP?MP_COLOR:TREND_COLORS[(i-1+TREND_COLORS.length)%TREND_COLORS.length];
     const lbl=document.createElement('label');
+    const TREND_DISPLAY_REMAP={"EAST NIMAR":"KHANDWA"};
+    const distDisplay=TREND_DISPLAY_REMAP[dist]||dist;
     lbl.className='t-dd-item';lbl.dataset.name=dist;
     if(isMP) lbl.style.cssText='font-weight:700;background:#f0f4ff;border-bottom:1px solid #e2e8f0';
-    lbl.innerHTML=`<input type="checkbox" ${activeTrendDists.has(dist)?'checked':''} data-dist="${dist}"><span class="t-dd-swatch" style="background:${col};${isMP?'border:2px solid #0f1e2e':''};"></span>${isMP?'<strong>'+dist+'</strong>':dist}`;
+    lbl.innerHTML=`<input type="checkbox" ${activeTrendDists.has(dist)?'checked':''} data-dist="${dist}"><span class="t-dd-swatch" style="background:${col};${isMP?'border:2px solid #0f1e2e':''};"></span>${isMP?'<strong>'+distDisplay+'</strong>':distDisplay}`;
     lbl.querySelector('input').addEventListener('change',function(){
       if(this.checked)activeTrendDists.add(dist);else activeTrendDists.delete(dist);
       updateTrendCharts();updateTrendTrigger();
@@ -1068,7 +1089,10 @@ function loadFromAppsScript(){
       console.log("Sheets:",wb.SheetNames);
       document.getElementById("load-hint").textContent="Sheets: "+wb.SheetNames.join(" | ");
       const n=parseWorkbook(wb);
-      setP(100);setTimeout(()=>{wrap.style.display="none";setP(0);overlay.classList.remove("active");},700);
+      setP(100);setTimeout(()=>{wrap.style.display="none";setP(0);overlay.classList.remove("active");
+        // Fire dataLoaded so the tour can start
+        document.dispatchEvent(new CustomEvent("dataLoaded"));
+      },700);
       document.getElementById("load-bar").classList.add("loaded");
       document.getElementById("load-status").textContent="✓ Live data — "+n+" districts loaded";
       if(typeof geojsonLayer!=="undefined"&&geojsonLayer)geojsonLayer.setStyle(districtStyle);
@@ -1630,7 +1654,8 @@ function buildRow(key,d,isMp,visibleMetrics){
   const dt=d.detail||{};
   const agg=d.agg||{};
   const cls=isMp?"mp-row":"";
-  const label=isMp?"Madhya Pradesh (State)":key.charAt(0)+key.slice(1).toLowerCase();
+  const TABLE_DISPLAY_REMAP={"EAST NIMAR":"Khandwa"};
+  const label=isMp?"Madhya Pradesh (State)":(TABLE_DISPLAY_REMAP[key]||(key.charAt(0)+key.slice(1).toLowerCase()));
 
   // Raw-sort columns handled separately since they are not in METRICS_MAP
   const RAW_COLS={
@@ -1707,6 +1732,8 @@ function renderScorecard(rawName,d,isMp){
   const sc=document.getElementById("scorecard");
   const p=d.perf||{}, dt=d.detail||{}, agg=d.agg||{};
   const pretty=rawName.split(" ").map(w=>w.charAt(0).toUpperCase()+w.slice(1).toLowerCase()).join(" ");
+  const SC_DISPLAY_REMAP={"East Nimar":"Khandwa"};
+  const prettyDisplay=SC_DISPLAY_REMAP[pretty]||pretty;
 
   function card(label,absVal,pctStr,sub,rawStr,metricKey){
     const n=parsePct(pctStr);const color=pctColor(n);const barW=n!==null?n:0;
@@ -1745,7 +1772,7 @@ function renderScorecard(rawName,d,isMp){
 
   const html=`
   <div class="sc-banner">
-    <div class="sc-dist-name">${pretty}</div>
+    <div class="sc-dist-name">${prettyDisplay}</div>
     <div class="sc-dist-sub">${isMp?"State-Level Overview":"Madhya Pradesh · SCD Program"}</div>
   </div>
 
@@ -1919,7 +1946,8 @@ document.getElementById("show-table-btn").addEventListener("click",()=>{ openTab
       const raw=feature.properties.district||"";
       if(raw.startsWith("DISPUTED")){return;}
       const key=normalizeName(raw);
-      const display=raw.trim().toUpperCase();
+      const MAP_DISPLAY_REMAP={"EAST NIMAR":"KHANDWA"};
+      const display=MAP_DISPLAY_REMAP[raw.trim().toUpperCase()]||raw.trim().toUpperCase();
 
       function tooltipContent(){
         const d=DISTRICT_SCORECARD[key];
@@ -1963,14 +1991,16 @@ document.getElementById("show-table-btn").addEventListener("click",()=>{ openTab
   /* Permanent district labels */
   const lblPane=map.createPane("labels");
   lblPane.style.zIndex=450;lblPane.style.pointerEvents="none";
+  const MAP_LABEL_REMAP={"EAST NIMAR":"KHANDWA"};
   mpFeatures.forEach(feature=>{
     const raw=(feature.properties.district||"").trim();
     if(!raw||raw.startsWith("DISPUTED"))return;
     const lyr=L.geoJSON(feature);
     const center=lyr.getBounds().getCenter();
+    const labelText=MAP_LABEL_REMAP[raw]||raw;
     L.marker(center,{
       pane:"labels",
-      icon:L.divIcon({className:"dist-lbl",html:raw,iconAnchor:[0,6]}),
+      icon:L.divIcon({className:"dist-lbl",html:labelText,iconAnchor:[0,6]}),
       interactive:false
     }).addTo(map);
   });
@@ -2471,6 +2501,137 @@ document.addEventListener('DOMContentLoaded', () => {
 document.querySelectorAll('.tbl-tab').forEach(btn => {
   btn.addEventListener('click', () => setTimeout(hookTableTooltips, 50));
 });
+</script>
+<div id="tour-overlay" style="display:none">
+  <div class="tour-spotlight" id="tour-spotlight"></div>
+  <div class="tour-card" id="tour-card">
+    <div class="tour-step-badge" id="tour-badge">VIEW 1 OF 4</div>
+    <h3 id="tour-title"></h3>
+    <p id="tour-desc"></p>
+    <div class="tour-nav">
+      <button class="tour-btn-skip" id="tour-skip">Skip Tour</button>
+      <div class="tour-dots" id="tour-dots"></div>
+      <div style="display:flex;gap:8px;">
+        <button class="tour-btn-next" id="tour-prev" style="background:#e2e8f0;color:#334155;">← Prev</button>
+        <button class="tour-btn-next" id="tour-next">Next →</button>
+      </div>
+    </div>
+  </div>
+</div>
+
+<script>
+(function(){
+  const STEPS=[
+    {
+      title:"🗺️ Heatmap",
+      desc:"This map shows all districts of Madhya Pradesh colour-coded by performance. Darker green means better coverage; districts shaded red or orange indicate low coverage and need attention. Click any district to see its detailed scorecard on the right.",
+      target:"map",
+      position:"right"
+    },
+    {
+      title:"📋 Scorecard",
+      desc:"When you click a district on the map, its detailed scorecard appears here — showing screening targets vs actuals, disease positivity, and treatment initiation rates.",
+      target:"panel",
+      position:"left"
+    },
+    {
+      title:"📊 Comparison Table",
+      desc:"Click 'Show Table' to compare all districts side by side. Sort by any metric to quickly identify top and bottom performing districts across the state.",
+      target:"show-table-btn",
+      position:"bottom"
+    },
+    {
+      title:"📈 Trend Panel",
+      desc:"Click 'Trend Panel' to see month-by-month screening and disease trends for any district. Helps track progress over time and spot seasonal patterns.",
+      target:"show-trend-btn",
+      position:"top"
+    }
+  ];
+
+  let current=0;
+
+  function getEl(id){return document.getElementById(id);}
+
+  function getRect(id){
+    const el=document.getElementById(id)||document.querySelector('.'+id)||document.querySelector('#'+id);
+    if(!el)return null;
+    return el.getBoundingClientRect();
+  }
+
+  function positionSpotlight(rect){
+    if(!rect)return;
+    const pad=10;
+    const sl=getEl("tour-spotlight");
+    sl.style.left=(rect.left-pad)+"px";
+    sl.style.top=(rect.top-pad)+"px";
+    sl.style.width=(rect.width+pad*2)+"px";
+    sl.style.height=(rect.height+pad*2)+"px";
+  }
+
+  function positionCard(rect,position){
+    const card=getEl("tour-card");
+    const cw=330,ch=220,margin=18;
+    const vw=window.innerWidth,vh=window.innerHeight;
+    let left,top;
+    if(!rect){left=vw/2-cw/2;top=vh/2-ch/2;}
+    else if(position==="right"){left=Math.min(rect.right+margin,vw-cw-10);top=Math.max(rect.top,10);}
+    else if(position==="left"){left=Math.max(rect.left-cw-margin,10);top=Math.max(rect.top,10);}
+    else if(position==="bottom"){left=Math.max(Math.min(rect.left,vw-cw-10),10);top=Math.min(rect.bottom+margin,vh-ch-10);}
+    else if(position==="top"){left=Math.max(Math.min(rect.right-cw,vw-cw-10),10);top=Math.max(rect.top-ch-margin-60,10);}
+    card.style.left=left+"px";
+    card.style.top=top+"px";
+  }
+
+  function renderDots(){
+    const dots=getEl("tour-dots");
+    dots.innerHTML=STEPS.map((_,i)=>`<div class="tour-dot${i===current?' active':''}"></div>`).join("");
+  }
+
+  function showStep(i){
+    const step=STEPS[i];
+    getEl("tour-badge").textContent=`VIEW ${i+1} OF ${STEPS.length}`;
+    getEl("tour-title").textContent=step.title;
+    getEl("tour-desc").textContent=step.desc;
+    getEl("tour-next").textContent=i===STEPS.length-1?"Got it! ✓":"Next →";
+    const prevBtn=getEl("tour-prev");
+    prevBtn.disabled=(i===0);
+    prevBtn.style.opacity=(i===0)?"0.4":"1";
+    prevBtn.style.cursor=(i===0)?"not-allowed":"pointer";
+    renderDots();
+    const rect=getRect(step.target);
+    positionSpotlight(rect);
+    positionCard(rect,step.position);
+  }
+
+  function startTour(){
+    current=0;
+    getEl("tour-overlay").classList.add("active");
+    getEl("tour-overlay").style.display="block";
+    showStep(0);
+  }
+  window.startTour=startTour;
+
+  function endTour(){
+    getEl("tour-overlay").classList.remove("active");
+    getEl("tour-overlay").style.display="none";
+  }
+
+  getEl("tour-next").addEventListener("click",function(){
+    if(current<STEPS.length-1){current++;showStep(current);}
+    else{endTour();}
+  });
+
+  getEl("tour-prev").addEventListener("click",function(){
+    if(current>0){current--;showStep(current);}
+  });
+
+  getEl("tour-skip").addEventListener("click",endTour);
+
+  // Listen for dataLoaded event fired by the loader after overlay clears
+  document.addEventListener("dataLoaded",function(){
+    setTimeout(startTour,600);
+  });
+})();
 </script>
 </body>
 </html>
