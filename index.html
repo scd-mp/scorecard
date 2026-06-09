@@ -479,7 +479,7 @@ button,label{font-family:var(--font-b);letter-spacing:.1px}
       <div class="mb-broad-row">
         <button class="mb-broad" data-broad="all-agg">All</button>
         <button class="mb-broad active" data-broad="agg-screening">Total Screening</button>
-        <button class="mb-broad" data-broad="agg-scd">Disease Positive</button>
+        <button class="mb-broad" data-broad="agg-scd">Diseased</button>
         <button class="mb-broad" data-broad="agg-treatment">On Treatment</button>
         <button class="mb-broad" data-broad="agg-hu">On HU</button>
         <button class="mb-broad" data-broad="agg-cards">Cards</button>
@@ -488,7 +488,7 @@ button,label{font-family:var(--font-b);letter-spacing:.1px}
         <button class="mb-btn mb-sub active" data-metric="agg_total_screening" data-rawsort="agg_total_screening">Total Screening (#)</button>
       </div>
       <div class="mb-sub-row" id="sub-agg-scd" style="display:none">
-        <button class="mb-btn mb-sub" data-metric="agg_scd_diagnosed" data-rawsort="agg_scd_diagnosed">Disease Positive (#)</button>
+        <button class="mb-btn mb-sub" data-metric="agg_scd_diagnosed" data-rawsort="agg_scd_diagnosed">Diseased (#)</button>
       </div>
       <div class="mb-sub-row" id="sub-agg-treatment" style="display:none">
         <button class="mb-btn mb-sub" data-metric="agg_on_treatment" data-rawsort="agg_on_treatment">On Treatment (#)</button>
@@ -510,7 +510,7 @@ button,label{font-family:var(--font-b);letter-spacing:.1px}
       <div class="mb-broad-row">
         <button class="mb-broad" data-broad="all-lld">All</button>
         <button class="mb-broad active" data-broad="coverage">Screening Coverage</button>
-        <button class="mb-broad" data-broad="scd-ll">Disease Positive</button>
+        <button class="mb-broad" data-broad="scd-ll">Diseased</button>
         <button class="mb-broad" data-broad="treatment-ll">Treatment</button>
       </div>
       <div class="mb-sub-row" id="sub-coverage">
@@ -520,7 +520,7 @@ button,label{font-family:var(--font-b);letter-spacing:.1px}
         <button class="mb-btn mb-sub" data-metric="anc_pct" title="Source: ANMOL Preg · Apr–Oct 2025">ANC (%) ✱</button>
       </div>
       <div class="mb-sub-row" id="sub-scd-ll" style="display:none">
-        <button class="mb-btn mb-sub" data-metric="scd_diagnosed" data-rawsort="scd_diagnosed">Disease Positive (#)</button>
+        <button class="mb-btn mb-sub" data-metric="scd_diagnosed" data-rawsort="scd_diagnosed">Diseased (#)</button>
       </div>
       <div class="mb-sub-row" id="sub-treatment-ll" style="display:none">
         <button class="mb-btn mb-sub" data-metric="hu_pct">On HU (%)</button>
@@ -1240,7 +1240,7 @@ const METRICS_MAP={
   // ── AGGREGATE metrics (use d.agg) ──
 
   agg_total_screening:{label:"Total Screening (#)",abs:"",rawFn:(dt,d)=>null,detailPct:null},
-  agg_scd_diagnosed:{label:"Disease Positive (#)",abs:"",rawFn:(dt,d)=>null,detailPct:null},
+  agg_scd_diagnosed:{label:"Diseased (#)",abs:"",rawFn:(dt,d)=>null,detailPct:null},
   agg_on_treatment:{label:"On Treatment (#)",abs:"",
     rawFn:(dt,d)=>{const a=d?.agg||{};return a.on_treatment!=null&&a.scd_diagnosed!=null?`${fmt(a.on_treatment)} / ${fmt(a.scd_diagnosed)}`:null;},detailPct:null},
   agg_pct_treatment:{label:"On Treatment (%)",abs:"",
@@ -1265,7 +1265,7 @@ const METRICS_MAP={
     rawFn:(dt)=>dt.actual_540!=null&&dt.target_540!=null?`${fmt(dt.actual_540)} / ${fmt(dt.target_540)}`:null},
   anc_pct:{label:"ANC Screening (%) · Source: ANMOL Preg · Apr–Oct 2025",abs:"anc_abs",
     rawFn:(dt)=>dt.actual_anc!=null&&dt.target_anc!=null?`${fmt(dt.actual_anc)} / ${fmt(dt.target_anc)}`:null},
-  scd_diagnosed:{label:"Disease Positive (#)",abs:"",rawFn:(dt)=>null,detailPct:null},
+  scd_diagnosed:{label:"Diseased (#)",abs:"",rawFn:(dt)=>null,detailPct:null},
   hu_pct:{label:"Initiated on HU (%)",abs:"hu_abs",
     rawFn:(dt)=>dt.ll_scd_initiated_hu!=null&&dt.ll_scd_diagnosed!=null?`${fmt(dt.ll_scd_initiated_hu)} / ${fmt(dt.ll_scd_diagnosed)}`:null,
     detailPct:"ll_pct_initiated_hu"},
@@ -1487,7 +1487,7 @@ function renderCriticalComparison(){
       aggSub:null, llSub:null
     },
     {
-      label:"Disease Positive",
+      label:"Diseased",
       aggVal:fmt(agg.scd_diagnosed)||"—",
       llVal:fmt(dt.ll_scd_diagnosed)||"—",
       aggSub:null, llSub:null
@@ -1954,7 +1954,7 @@ document.getElementById("show-table-btn").addEventListener("click",()=>{ openTab
         return `<div class="tt-name">${display}</div>`+
           (hasData?
             `<div class="tt-row"><span class="tt-lbl">Total Screening</span><span class="tt-val">${fmt(agg.total_screening)??'—'}</span></div>`+
-            `<div class="tt-row"><span class="tt-lbl">Disease Positive</span><span class="tt-val">${fmt(agg.scd_diagnosed)??'—'}</span></div>`
+            `<div class="tt-row"><span class="tt-lbl">Diseased</span><span class="tt-val">${fmt(agg.scd_diagnosed)??'—'}</span></div>`
           :`<div class="tt-row"><span class="tt-lbl" style="opacity:.5">No data loaded</span></div>`);
       }
 
@@ -2189,7 +2189,7 @@ let graphVisible=true;
 const METRIC_DISPLAY_NAMES = {
   // Aggregate tab — exact card labels from scorecard
   "agg_total_screening"  : "Total Screening",
-  "agg_scd_diagnosed"    : "Disease Positive",
+  "agg_scd_diagnosed"    : "Diseased",
   "agg_on_treatment"     : "On Treatment",
   "agg_pct_treatment"    : "On Treatment",
   "agg_on_hu"            : "On HU",
@@ -2201,7 +2201,7 @@ const METRIC_DISPLAY_NAMES = {
   "u5_pct"               : "U-5 Screening",
   "s540_pct"             : "Other age group Screening",
   "anc_pct"              : "ANC Screening · ANMOL Preg · Apr–Oct 2025",
-  "scd_diagnosed"        : "Disease Positive",
+  "scd_diagnosed"        : "Diseased",
   "hu_pct"               : "On HU",
   "fa_pct"               : "On FA",
   "vacc_pct"             : "Vaccinated",
@@ -2277,7 +2277,7 @@ const DS_INFO = {
   'lld-screenings'   : {t:'Total Screenings (Line List)',
                         s:'Sheet: Detailed Report\nCol L — "Screenings for the period"\nDistrict rows 5–43 | MP total row 44'},
 
-  'lld-scd'          : {t:'Disease Positive (Line List)',
+  'lld-scd'          : {t:'Diseased (Line List)',
                         s:'Sheet: Detailed Report\nCol O — "SCD (HbSS) patients diagnosed so far"\nDistrict rows 5–43 | MP total row 44'},
 
   'lld-on-hu'        : {t:'On HU — count (Line List)',
@@ -2315,7 +2315,7 @@ const DS_INFO = {
   'agg-total'        : {t:'Total Screening (Aggregate)',
                         s:'Sheet: Detailed Report\nCol Z — "Total screening conducted so far"\nDistrict rows 5–43 | MP total row 44'},
 
-  'agg-scd'          : {t:'Disease Positive (Aggregate)',
+  'agg-scd'          : {t:'Diseased (Aggregate)',
                         s:'Sheet: Detailed Report\nCol U — "SCD (HbSS) patients diagnosed so far" (Aggregate block)\nDistrict rows 5–43 | MP total row 44'},
 
   'agg-on-hu'        : {t:'On HU — count (Aggregate)',
@@ -2325,7 +2325,7 @@ const DS_INFO = {
                         s:'Sheet: Detailed Report\nCol AA — "Genetic cards distributed so far"\nDistrict rows 5–43 | MP total row 44'},
 
   // Aggregate metric cards
-  'agg-scd-diag-pct' : {t:'Disease Positive % (Aggregate)',
+  'agg-scd-diag-pct' : {t:'Diseased % (Aggregate)',
                         s:'Sheet: Detailed Report\nCalculated: Col U ÷ Col Z × 100\nCol U = SCD diagnosed (agg) | Col Z = Total screening (agg)\nDistrict rows 5–43 | MP total row 44'},
 
   'agg_pct_treatment': {t:'On Treatment % (Aggregate)',
@@ -2345,7 +2345,7 @@ const DS_INFO = {
   'agg_total_screening': {t:'Total Screening # (Aggregate)',
                           s:'Sheet: Detailed Report\nCol Z — "Total screening conducted so far"\nDistrict rows 5–43 | MP total row 44'},
 
-  'agg_scd_diagnosed'  : {t:'Disease Positive # (Aggregate)',
+  'agg_scd_diagnosed'  : {t:'Diseased # (Aggregate)',
                           s:'Sheet: Detailed Report\nCol U — "SCD (HbSS) patients diagnosed so far" (Aggregate block)\nDistrict rows 5–43 | MP total row 44'},
 
   'agg_on_treatment'   : {t:'On Treatment # (Aggregate)',
@@ -2363,7 +2363,7 @@ const DS_INFO = {
   'scd_initiated_hu'   : {t:'HU Initiated % (Aggregate)',
                           s:'Sheet: Detailed Report\nCol X — "% Initiated on HU" (Aggregate block)\nCalculated: Col V ÷ Col U × 100\nDistrict rows 5–43 | MP total row 44'},
 
-  'scd_diagnosed'      : {t:'Disease Positive # (Line List)',
+  'scd_diagnosed'      : {t:'Diseased # (Line List)',
                           s:'Sheet: Detailed Report\nCol O — "SCD (HbSS) patients diagnosed so far" (Line List)\nDistrict rows 5–43 | MP total row 44'},
 };
 
@@ -2433,7 +2433,7 @@ function hookScorecardTooltips() {
 
   // LLD tab KPI strip
   attachTT(kpiByLabel('Total Screenings'),   'lld-screenings');
-  attachTT(kpiByLabel('Disease Positive'),       'lld-scd');
+  attachTT(kpiByLabel('Diseased'),       'lld-scd');
   attachTT(kpiByLabel('On HU'),               'lld-on-hu');
 
   // LLD Screening Coverage cards
