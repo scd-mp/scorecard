@@ -2060,6 +2060,7 @@ document.getElementById("show-table-btn").addEventListener("click",()=>{ openTab
           document.getElementById("placeholder").style.display="block";
           document.getElementById("placeholder").querySelector("p").textContent=`No data for ${display}. Load your Excel above.`;
           document.getElementById("scorecard").style.display="none";
+          updateMapStatOverlay(null);
         }
       });
 
