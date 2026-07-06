@@ -470,7 +470,7 @@ button,label{font-family:var(--font-b);letter-spacing:.1px}
     <!-- Two tabs: Aggregate Data | Line List Data -->
     <div class="tbl-tabs">
       <button class="tbl-tab active" data-ttab="agg">Aggregate Data<br><span style="font-size:9px;opacity:.55;font-weight:400">As of 7 May 2026</span></button>
-      <button class="tbl-tab" data-ttab="lld">Line List Data<br><span style="font-size:9px;opacity:.55;font-weight:400">Screening: Apr 2025–Feb 2026 · Treatment/Disease LL: 23 Mar 2026</span></button>
+      <button class="tbl-tab" data-ttab="lld">Line List Data<br><span style="font-size:9px;opacity:.55;font-weight:400">Screening: Apr 2025–Mar 2026 · Treatment/Disease LL: 5 Jun 2026</span></button>
       <button class="tbl-tab" data-ttab="crit">Critical Comparison</button>
     </div>
 
@@ -507,7 +507,7 @@ button,label{font-family:var(--font-b);letter-spacing:.1px}
 
     <!-- Line List Data metric bar -->
     <div class="tbl-metric-bar" id="tmetric-lld" style="display:none">
-      <div class="mb-label">Sort &amp; colour map by — Line List Data &middot; Screening: Apr 2025–Feb 2026 &middot; Treatment/Disease LL: 23 Mar 2026</div>
+      <div class="mb-label">Sort &amp; colour map by — Line List Data &middot; Screening: Apr 2025–Mar 2026 &middot; Treatment/Disease LL: 5 Jun 2026</div>
       <div class="mb-broad-row">
         <button class="mb-broad" data-broad="all-lld">All</button>
         <button class="mb-broad active" data-broad="coverage">Screening Coverage</button>
@@ -1383,6 +1383,9 @@ let selectedDistricts=new Set();
 let districtScorecardShowing=false; // tracks if a district (not MP) scorecard is currently shown
 let tableSlice="all"; // kept for compatibility
 let activeTableTab="agg"; // track which table tab is active
+let critHuDrillOpen=false; // Critical Comparison → On HU per-district drill-down
+let critHuSort="name"; // active sort column in the drill-down
+let critHuDir="desc"; // active sort direction: "desc" (first click) or "asc"
 const mpKey="MADHYA PRADESH"; // global — used by renderTable and renderCriticalComparison
 let colSlice={}; // per-column: {metric: "all"|"top5"|"bottom5"}
 
@@ -1558,12 +1561,15 @@ function renderCriticalComparison(){
     return;
   }
 
+  // ── On HU per-district drill-down ──
+  if(critHuDrillOpen){ renderCritHuDrill(head,body); return; }
+
   const agg=d.agg||{}, dt=d.detail||{};
 
   head.innerHTML=`<tr>
     <th style="text-align:left;padding:10px 14px;border-bottom:2px solid #cbd5e1;color:#334155">Metric</th>
     <th style="text-align:right;padding:10px 14px;border-bottom:2px solid #cbd5e1;color:#334155">Aggregate Data<br><span style="font-size:9px;color:#64748b;font-weight:400;letter-spacing:.2px">As of 7 May 2026</span></th>
-    <th style="text-align:right;padding:10px 14px;border-bottom:2px solid #cbd5e1;color:#334155">Line List Data<br><span style="font-size:9px;color:#64748b;font-weight:400;letter-spacing:.2px">Screening: Apr 2025–Feb 2026 · Treatment/Disease LL: 23 Mar 2026</span></th>
+    <th style="text-align:right;padding:10px 14px;border-bottom:2px solid #cbd5e1;color:#334155">Line List Data<br><span style="font-size:9px;color:#64748b;font-weight:400;letter-spacing:.2px">Screening: Apr 2025–Mar 2026 · Treatment/Disease LL: 5 Jun 2026</span></th>
   </tr>`;
 
   const aggHuDot=`<span style="display:inline-block;width:9px;height:9px;border-radius:50%;background:${pctColor(parsePct(agg.pct_hu))};margin-right:6px;vertical-align:middle"></span>`;
@@ -1574,25 +1580,26 @@ function renderCriticalComparison(){
       label:"Total Screening",
       aggVal:fmt(agg.total_screening)||"—",
       llVal:fmt(dt.screenings_period)||"—",
-      aggSub:null, llSub:null
+      aggSub:null, llSub:null, clickable:false
     },
     {
       label:"Diseased",
       aggVal:fmt(agg.scd_diagnosed)||"—",
       llVal:fmt(dt.ll_scd_diagnosed)||"—",
-      aggSub:null, llSub:null
+      aggSub:null, llSub:null, clickable:false
     },
     {
-      label:"On HU %",
+      label:`On HU % <span style="font-size:10px;font-weight:600;color:#b42318;margin-left:6px">▸ view by district</span>`,
       aggVal:`${aggHuDot}${agg.pct_hu||"—"}`,
       llVal:`${llHuDot}${dt.ll_pct_initiated_hu||"—"}`,
       aggSub:agg.on_hu!=null&&agg.scd_diagnosed!=null?`${fmt(agg.on_hu)} / ${fmt(agg.scd_diagnosed)}`:null,
-      llSub:dt.ll_scd_initiated_hu!=null&&dt.ll_scd_diagnosed!=null?`${fmt(dt.ll_scd_initiated_hu)} / ${fmt(dt.ll_scd_diagnosed)}`:null
+      llSub:dt.ll_scd_initiated_hu!=null&&dt.ll_scd_diagnosed!=null?`${fmt(dt.ll_scd_initiated_hu)} / ${fmt(dt.ll_scd_diagnosed)}`:null,
+      clickable:true
     }
   ];
 
   const tdBase="padding:14px 14px;border-bottom:1px solid #e2e8f0";
-  body.innerHTML=rows.map(r=>`<tr style="background:#fff">
+  body.innerHTML=rows.map(r=>`<tr style="background:#fff${r.clickable?';cursor:pointer':''}"${r.clickable?' onclick="critOpenHuDrill()" onmouseover="this.style.background=\'#eff6ff\'" onmouseout="this.style.background=\'#fff\'" title="Click to compare On HU by district"':''}>
     <td style="${tdBase};font-weight:600;color:#1e293b;font-size:13px">${r.label}</td>
     <td style="${tdBase};text-align:right;font-size:14px;color:#1e293b">
       ${r.aggVal}${r.aggSub?`<div class="raw-line" style="margin-top:3px;color:#64748b">${r.aggSub}</div>`:""}
@@ -1601,6 +1608,89 @@ function renderCriticalComparison(){
       ${r.llVal}${r.llSub?`<div class="raw-line" style="margin-top:3px;color:#64748b">${r.llSub}</div>`:""}
     </td>
   </tr>`).join("");
+}
+
+// Open / close the On HU per-district drill-down (Critical Comparison)
+function critOpenHuDrill(){ critHuDrillOpen=true; critHuSort="name"; critHuDir="desc"; renderCriticalComparison(); }
+function critCloseHuDrill(){ critHuDrillOpen=false; renderCriticalComparison(); }
+// Click a heading: same column → toggle direction; new column → start descending
+function critSortHu(col){ if(critHuSort===col){ critHuDir=(critHuDir==="desc"?"asc":"desc"); } else { critHuSort=col; critHuDir="desc"; } renderCriticalComparison(); }
+
+// Build one drill-down data row from a scorecard entry
+function critHuDrillRow(name){
+  const rec=DISTRICT_SCORECARD[name]; if(!rec) return null;
+  const aggHU=(rec.agg&&rec.agg.on_hu!=null)?Number(rec.agg.on_hu):null;              // Aggregate On HU (#)
+  const llHU=(rec.detail&&rec.detail.ll_scd_initiated_hu!=null)?Number(rec.detail.ll_scd_initiated_hu):null; // Line List On HU (#)
+  const diff=(aggHU!=null&&llHU!=null)?(aggHU-llHU):null;                             // Aggregate − Line List
+  const pctDiff=(diff!=null&&llHU!=null&&llHU!==0)?(diff/llHU*100):null;              // ÷ Line List × 100
+  return {name,aggHU,llHU,diff,pctDiff};
+}
+
+function renderCritHuDrill(head,body){
+  const signInt=v=>v==null?"—":(v>0?"+":"")+fmt(v);
+  const signPct=v=>v==null?"—":(v>0?"+":"")+v.toFixed(1)+"%";
+
+  // District rows only (exclude MP total and DISPUTED polygons)
+  const keys=Object.keys(DISTRICT_SCORECARD)
+    .filter(k=>k!==mpKey && !k.startsWith("DISPUTED"));
+
+  let rows=keys.map(critHuDrillRow).filter(Boolean);
+  const mpRow=critHuDrillRow(mpKey); // always pinned at the bottom, never sorted
+
+  // ── Sort district rows by active column & direction (nulls always last) ──
+  const asc=critHuDir==="asc";
+  const cmpNum=(x,y)=>{ if(x==null&&y==null)return 0; if(x==null)return 1; if(y==null)return -1; return asc?(x-y):(y-x); };
+  const cmpName=(x,y)=>asc?x.localeCompare(y):y.localeCompare(x);
+  const comparators={
+    name:  (a,b)=>cmpName(a.name,b.name),
+    aggHU: (a,b)=>cmpNum(a.aggHU,b.aggHU),
+    llHU:  (a,b)=>cmpNum(a.llHU,b.llHU),
+    diff:  (a,b)=>cmpNum(a.diff,b.diff),
+    pctDiff:(a,b)=>cmpNum(a.pctDiff,b.pctDiff)
+  };
+  rows=rows.slice().sort(comparators[critHuSort]||comparators.name);
+
+  // Sortable header cell — arrow reflects current direction; click toggles
+  const arrow=col=>critHuSort===col?`<span style="margin-left:4px;font-size:9px">${asc?"▲":"▼"}</span>`:"";
+  const thBase="padding:9px 14px;border-bottom:2px solid #cbd5e1;color:#334155;cursor:pointer;user-select:none";
+  const th=(col,align,title,sub)=>`<th onclick="critSortHu('${col}')" title="Click to sort (click again to reverse)" style="text-align:${align};${thBase}${critHuSort===col?';background:#eef4fb':''}">${title}${arrow(col)}${sub?`<br><span style="font-size:9px;color:#64748b;font-weight:400;letter-spacing:.2px">${sub}</span>`:""}</th>`;
+
+  head.innerHTML=`
+    <tr><th colspan="5" style="text-align:left;padding:10px 14px 4px;border:none;background:transparent">
+      <span onclick="critCloseHuDrill()" style="cursor:pointer;color:#b42318;font-weight:700;font-size:12px;letter-spacing:.2px" title="Back to Critical Comparison">← Back to Critical Comparison</span>
+      <span style="color:#64748b;font-weight:400;font-size:11px;margin-left:10px">On HU by district — Aggregate vs Line List · click a heading to sort · click again to reverse</span>
+    </th></tr>
+    <tr>
+      ${th("name","left","District","")}
+      ${th("aggHU","right","On HU (Aggregate)","As of 7 May 2026")}
+      ${th("llHU","right","On HU (Line List)","As of 5 Jun 2026")}
+      ${th("diff","right","Gap in HU enrollment","Aggregate − Line List")}
+      ${th("pctDiff","right","% Gap","")}
+    </tr>`;
+
+  if(!rows.length){
+    body.innerHTML=`<tr><td colspan="5" style="text-align:center;padding:40px;color:#94a3b8;font-size:13px">No district data available</td></tr>`;
+    return;
+  }
+
+  const tdBase="padding:11px 14px;border-bottom:1px solid #e2e8f0;font-size:13px";
+  const rowHtml=(r,mp)=>{
+    const bg = mp ? "#152238" : "#fff";
+    const nameCol = mp ? "#fff" : "#1e3a5f";
+    const numCol = mp ? "#fff" : "#1e293b";
+    const fw = mp ? "700" : "400";
+    return `<tr style="background:${bg}${mp?"":";cursor:default"}"${mp?"":' onmouseover="this.style.background=\'#eff6ff\'" onmouseout="this.style.background=\'#fff\'"'}>
+      <td style="${tdBase};text-align:left;font-weight:${mp?"700":"600"};color:${nameCol}">${mp?"MADHYA PRADESH":r.name}</td>
+      <td style="${tdBase};text-align:right;color:${numCol};font-weight:${fw}">${fmt(r.aggHU)}</td>
+      <td style="${tdBase};text-align:right;color:${numCol};font-weight:${fw}">${fmt(r.llHU)}</td>
+      <td style="${tdBase};text-align:right;color:${numCol};font-weight:${fw}">${signInt(r.diff)}</td>
+      <td style="${tdBase};text-align:right;color:${numCol};font-weight:${fw}">${signPct(r.pctDiff)}</td>
+    </tr>`;
+  };
+
+  let html=rows.map(r=>rowHtml(r,false)).join("");
+  if(mpRow) html+=rowHtml(mpRow,true);
+  body.innerHTML=html;
 }
 
 function renderTable(){
@@ -1867,7 +1957,7 @@ function renderScorecard(rawName,d,isMp){
   <!-- TABS -->
   <div class="sc-tabs">
     <div class="sc-tab active" onclick="scSwitchTab(this,'sc-tab-b')">🗂 Aggregate Data<br><span style="font-size:8px;opacity:.55;font-weight:400">As of 7 May 2026</span></div>
-    <div class="sc-tab" onclick="scSwitchTab(this,'sc-tab-a')">📋 Line List Data<br><span style="font-size:8px;opacity:.55;font-weight:400">Apr 2025–Feb 2026 · Disease & Treatment LL: 23 Mar 2026</span></div>
+    <div class="sc-tab" onclick="scSwitchTab(this,'sc-tab-a')">📋 Line List Data<br><span style="font-size:8px;opacity:.55;font-weight:400">Apr 2025–Mar 2026 · Disease & Treatment LL: 5 Jun 2026</span></div>
   </div>
 
     <!-- TAB A: LINE LIST DATA -->
@@ -1892,7 +1982,7 @@ function renderScorecard(rawName,d,isMp){
       </div>
     </div>
 
-    ${sec("Screening Coverage vs Target","#2980b9","Screening Data · Apr 2025–Feb 2026<br>ANC: ANMOL Preg · Apr–Oct 2025")}
+    ${sec("Screening Coverage vs Target","#2980b9","Screening Data · Apr 2025–Mar 2026<br>ANC: ANMOL Preg · Apr–Oct 2025")}
     <div class="cards-grid">
       ${(()=>{
         const tgt=(dt.target_u5||0)+(dt.target_540||0)+(dt.target_anc||0);
@@ -1907,7 +1997,7 @@ function renderScorecard(rawName,d,isMp){
       ${(()=>{const ancDenom=dt.anc_coverage!=null&&dt.anc_coverage>0?dt.anc_coverage:(dt.target_anc>0?dt.target_anc:null);const ancPct=dt.actual_anc!=null&&ancDenom?Math.round(dt.actual_anc/ancDenom*100):parsePct(p.anc_pct);const ancPctStr=ancPct!==null?ancPct+"%":"—";const ancRaw=dt.actual_anc!=null&&ancDenom!=null?`${fmt(dt.actual_anc)} / ${fmt(ancDenom)}`:null;return card("ANC Screening · ANMOL Preg · Apr–Oct 2025",ancPctStr,ancPctStr,"",ancRaw,"anc_pct");})()}
       ${(()=>{const s540Pct=dt.actual_540!=null&&dt.target_540>0?Math.round(dt.actual_540/dt.target_540*100):parsePct(p.s540_pct);const s540PctStr=s540Pct!==null?s540Pct+"%":"—";const s540Raw=dt.actual_540!=null&&dt.target_540!=null?`${fmt(dt.actual_540)} / ${fmt(dt.target_540)}`:null;return card("Other age group Screening",s540PctStr,s540PctStr,"",s540Raw,"s540_pct");})()}
     </div>
-    ${sec("Treatment Initiation","#c0392b","Treatment Line List · 23 Mar 2026 · Vaccine: 1 Dec 2025")}
+    ${sec("Treatment Initiation","#c0392b","Treatment Line List · 5 Jun 2026 · Vaccine: 1 Dec 2025")}
     <div class="cards-grid three">
       ${(()=>{const huLLPct=dt.ll_scd_initiated_hu!=null&&dt.ll_scd_diagnosed>0?Math.round(dt.ll_scd_initiated_hu/dt.ll_scd_diagnosed*100):parsePct(dt.ll_pct_initiated_hu);const huLLPctStr=huLLPct!==null?huLLPct+"%":"—";const huLLRaw=dt.ll_scd_initiated_hu!=null&&dt.ll_scd_diagnosed!=null?`${fmt(dt.ll_scd_initiated_hu)} / ${fmt(dt.ll_scd_diagnosed)}`:null;return card("On HU",huLLPctStr,huLLPctStr,"",huLLRaw,"hu_pct");})()}
       ${(()=>{const faPct=dt.fa_unique_total!=null&&dt.ll_scd_diagnosed>0?Math.round(dt.fa_unique_total/dt.ll_scd_diagnosed*100):parsePct(dt.pct_fa_all);const faPctStr=faPct!==null?faPct+"%":"—";const faRaw=dt.fa_unique_total!=null&&dt.ll_scd_diagnosed!=null?`${fmt(dt.fa_unique_total)} / ${fmt(dt.ll_scd_diagnosed)}`:null;return card("On FA",faPctStr,faPctStr,"",faRaw,"fa_pct");})()}
@@ -1915,7 +2005,7 @@ function renderScorecard(rawName,d,isMp){
     </div>
 
 
-    <div class="sc-foot">Source: Line List Data · Screening: Apr 2025–Feb 2026 · Treatment &amp; Disease LL: 23 Mar 2026</div>
+    <div class="sc-foot">Source: Line List Data · Screening: Apr 2025–Mar 2026 · Treatment &amp; Disease LL: 5 Jun 2026</div>
   </div>
 
   <!-- TAB B: AGGREGATE DATA -->
@@ -1956,7 +2046,7 @@ function renderScorecard(rawName,d,isMp){
     <div class="cards-grid">
       ${(()=>{const crdPct=agg.cards_distributed!=null&&agg.total_screening>0?Math.round(agg.cards_distributed/agg.total_screening*100):parsePct(agg.pct_cards);const crdPctStr=crdPct!==null?crdPct+"%":"—";const crdRaw=agg.cards_distributed!=null&&agg.total_screening!=null?`${fmt(agg.cards_distributed)} / ${fmt(agg.total_screening)}`:null;return card("Cards Distributed",crdPctStr,crdPctStr,"",crdRaw,"agg_pct_cards");})()}
     </div>
-    <div class="sc-foot">Source: Aggregate Data · As of 7 May 2026 &nbsp;|&nbsp; Treatment: 23 Mar 2026 &nbsp;|&nbsp; Disease list: 23 Mar 2026</div>
+    <div class="sc-foot">Source: Aggregate Data · As of 7 May 2026 &nbsp;|&nbsp; Treatment: 5 Jun 2026 &nbsp;|&nbsp; Disease list: 5 Jun 2026</div>
   </div>`;
 
   sc.innerHTML=html;
@@ -2191,6 +2281,7 @@ document.querySelectorAll(".tbl-tab").forEach(btn=>{
       forcedScorecardTab=null;
       activeMetric=null;
       sortCol=null;
+      critHuDrillOpen=false; // always start on the summary view
       renderTable();
     }
     renderTable();
