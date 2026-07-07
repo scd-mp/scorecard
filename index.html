@@ -1616,6 +1616,8 @@ function critCloseHuDrill(){ critHuDrillOpen=false; renderCriticalComparison(); 
 // Click a heading: same column → toggle direction; new column → start descending
 function critSortHu(col){ if(critHuSort===col){ critHuDir=(critHuDir==="desc"?"asc":"desc"); } else { critHuSort=col; critHuDir="desc"; } renderCriticalComparison(); }
 
+// Display-name remap for the drill-down (data key preserved; matches other views)
+const HU_DISPLAY_REMAP={"EAST NIMAR":"KHANDWA"};
 // Build one drill-down data row from a scorecard entry
 function critHuDrillRow(name){
   const rec=DISTRICT_SCORECARD[name]; if(!rec) return null;
@@ -1623,7 +1625,8 @@ function critHuDrillRow(name){
   const llHU=(rec.detail&&rec.detail.ll_scd_initiated_hu!=null)?Number(rec.detail.ll_scd_initiated_hu):null; // Line List On HU (#)
   const diff=(aggHU!=null&&llHU!=null)?(aggHU-llHU):null;                             // Aggregate − Line List
   const pctDiff=(diff!=null&&llHU!=null&&llHU!==0)?(diff/llHU*100):null;              // ÷ Line List × 100
-  return {name,aggHU,llHU,diff,pctDiff};
+  const display=HU_DISPLAY_REMAP[name]||name;                                        // shown & sorted by this
+  return {name,display,aggHU,llHU,diff,pctDiff};
 }
 
 function renderCritHuDrill(head,body){
@@ -1642,7 +1645,7 @@ function renderCritHuDrill(head,body){
   const cmpNum=(x,y)=>{ if(x==null&&y==null)return 0; if(x==null)return 1; if(y==null)return -1; return asc?(x-y):(y-x); };
   const cmpName=(x,y)=>asc?x.localeCompare(y):y.localeCompare(x);
   const comparators={
-    name:  (a,b)=>cmpName(a.name,b.name),
+    name:  (a,b)=>cmpName(a.display,b.display),
     aggHU: (a,b)=>cmpNum(a.aggHU,b.aggHU),
     llHU:  (a,b)=>cmpNum(a.llHU,b.llHU),
     diff:  (a,b)=>cmpNum(a.diff,b.diff),
@@ -1680,7 +1683,7 @@ function renderCritHuDrill(head,body){
     const numCol = mp ? "#fff" : "#1e293b";
     const fw = mp ? "700" : "400";
     return `<tr style="background:${bg}${mp?"":";cursor:default"}"${mp?"":' onmouseover="this.style.background=\'#eff6ff\'" onmouseout="this.style.background=\'#fff\'"'}>
-      <td style="${tdBase};text-align:left;font-weight:${mp?"700":"600"};color:${nameCol}">${mp?"MADHYA PRADESH":r.name}</td>
+      <td style="${tdBase};text-align:left;font-weight:${mp?"700":"600"};color:${nameCol}">${mp?"MADHYA PRADESH":r.display}</td>
       <td style="${tdBase};text-align:right;color:${numCol};font-weight:${fw}">${fmt(r.aggHU)}</td>
       <td style="${tdBase};text-align:right;color:${numCol};font-weight:${fw}">${fmt(r.llHU)}</td>
       <td style="${tdBase};text-align:right;color:${numCol};font-weight:${fw}">${signInt(r.diff)}</td>
